@@ -36,7 +36,7 @@ async def chat_with_data(req: Request):
     query = body.get("query")
     client_key = req.headers.get("x-api-key")
 
-    if client_key != VANNA_API_KEY:
+    if VANNA_API_KEY and client_key != VANNA_API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     if not query:
