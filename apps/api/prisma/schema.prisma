@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vendor {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  taxId       String? 
+  address     String?
+  createdAt   DateTime @default(now())
+  invoices    Invoice[]
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  address     String?
+  createdAt   DateTime @default(now())
+  invoices    Invoice[]
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  number        String
+  invoiceDate   DateTime?
+  deliveryDate  DateTime?
+  documentType  String?  // invoice, creditNote
+  currency      String?  // €
+  subTotal      Decimal? @db.Decimal(18,2)
+  taxTotal      Decimal? @db.Decimal(18,2)
+  total         Decimal? @db.Decimal(18,2)
+  status        String?  // paid, unpaid, overdue, credit
+  vendorId      String
+  customerId    String
+  vendor        Vendor   @relation(fields: [vendorId], references: [id])
+  customer      Customer @relation(fields: [customerId], references: [id])
+  payments      Payment[]
+  lineItems     LineItem[]
+  createdAt     DateTime @default(now())
+
+  @@index([vendorId])
+  @@index([customerId])
+  @@index([invoiceDate])
+  @@unique([number, vendorId])
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  invoiceId         String
+  dueDate           DateTime?
+  terms             String?
+  bankAccountNumber String?
+  bic               String?
+  netDays           Int?
+  discountPercent   Decimal? @db.Decimal(5,2)
+  discountDays      Int?
+  discountDueDate   DateTime?
+  discountedTotal   Decimal? @db.Decimal(18,2)
+
+  invoice           Invoice  @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
+
+model LineItem {
+  id           String   @id @default(uuid())
+  invoiceId    String
+  srNo         Int?
+  description  String?
+  quantity     Decimal? @db.Decimal(18,4)
+  unitPrice    Decimal? @db.Decimal(18,4)
+  totalPrice   Decimal? @db.Decimal(18,4)
+  sachkonto    String?
+  buSchluessel String?
+  vatRate      Decimal? @db.Decimal(5,2)
+  vatAmount    Decimal? @db.Decimal(18,2)
+  category     String?
+
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id])
+  @@index([invoiceId])
+}

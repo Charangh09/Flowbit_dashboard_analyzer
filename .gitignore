@@ -1,0 +1,21 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# env
+.env
+apps/*/.env
+services/*/.env
+
+# build
+.next
+dist
+coverage
+
+# python
+__pycache__/
+*.pyc
+
+# misc
+.DS_Store
+*.sqlite
