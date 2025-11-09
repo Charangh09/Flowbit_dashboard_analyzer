@@ -1,0 +1,28 @@
+{
+  "name": "@flowbit/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002"
+  },
+  "dependencies": {
+    "@radix-ui/react-tabs": "^1.0.5",
+    "@types/react-dom": "^19.2.2",
+    "chart.js": "^4.4.3",
+    "classnames": "^2.5.1",
+    "lucide-react": "^0.452.0",
+    "next": "14.2.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "recharts": "^2.12.7",
+    "tailwindcss": "^3.4.10"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.41",
+    "typescript": "^5.5.4"
+  }
+}

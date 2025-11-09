@@ -1,28 +1,21 @@
 {
-  "name": "@flowbit/web",
-  "version": "1.0.0",
+  "name": "flowbit-analytics",
   "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "data"
+  ],
   "scripts": {
-    "dev": "next dev -p 3002",
-    "build": "next build",
-    "start": "next start -p 3002"
-  },
-  "dependencies": {
-    "@radix-ui/react-tabs": "^1.0.5",
-    "@types/react-dom": "^19.2.2",
-    "chart.js": "^4.4.3",
-    "classnames": "^2.5.1",
-    "lucide-react": "^0.452.0",
-    "next": "14.2.5",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "recharts": "^2.12.7",
-    "tailwindcss": "^3.4.10"
+    "dev:api": "pnpm --filter @flowbit/api dev",
+    "dev:web": "pnpm --filter @flowbit/web dev",
+    "dev:vanna": "pnpm --filter @flowbit/vanna start",
+    "dev": "concurrently -k -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
+    "build": "pnpm -r build"
   },
   "devDependencies": {
-    "@types/react": "19.2.2",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.41",
-    "typescript": "^5.5.4"
-  }
+    "concurrently": "^9.0.0"
+  },
+  "packageManager": "pnpm@9.12.0"
 }
