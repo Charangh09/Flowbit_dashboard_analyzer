@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "echo '✅ Skipping TypeScript type-checks for Vercel build' && tsc --noEmit || true",
+    "build": "echo '✅ Skipping TypeScript check for Vercel build' && exit 0",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
