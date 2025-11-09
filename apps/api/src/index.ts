@@ -63,7 +63,7 @@ app.get('/stats', async (_req: Request, res: Response) => {
 // ------------------ /invoice-trends ------------------
 app.get('/invoice-trends', async (_req: Request, res: Response) => {
   try {
-    const rows = await prisma.$queryRawUnsafe<any[]>(`
+  const rows = await prisma.$queryRawUnsafe(`
       SELECT date_trunc('month', COALESCE("invoiceDate", now())) AS month,
              COUNT(*)::int AS invoice_count,
              COALESCE(SUM(COALESCE(total,0)),0)::decimal AS invoice_sum
@@ -88,7 +88,7 @@ app.get('/invoice-trends', async (_req: Request, res: Response) => {
 // ------------------ /vendors/top10 ------------------
 app.get('/vendors/top10', async (_req: Request, res: Response) => {
   try {
-    const rows = await prisma.$queryRawUnsafe<any[]>(`
+  const rows = await prisma.$queryRawUnsafe(`
       SELECT v.name, COALESCE(SUM(i.total),0) AS spend
       FROM "Invoice" i
       JOIN "Vendor" v ON v.id = i."vendorId"
@@ -112,7 +112,7 @@ app.get('/vendors/top10', async (_req: Request, res: Response) => {
 // ------------------ /category-spend ------------------
 app.get('/category-spend', async (_req: Request, res: Response) => {
   try {
-    const rows = await prisma.$queryRawUnsafe<any[]>(`
+  const rows = await prisma.$queryRawUnsafe(`
       SELECT COALESCE(li.category,'Uncategorized') AS category,
              COALESCE(SUM(li."totalPrice"),0) AS spend
       FROM "LineItem" li
@@ -135,7 +135,7 @@ app.get('/category-spend', async (_req: Request, res: Response) => {
 // ------------------ /cash-outflow ------------------
 app.get('/cash-outflow', async (_req: Request, res: Response) => {
   try {
-    const rows = await prisma.$queryRawUnsafe<any[]>(`
+  const rows = await prisma.$queryRawUnsafe(`
       SELECT COALESCE(p."dueDate", date_trunc('month', now()))::date AS date,
              COALESCE(SUM(i.total),0) AS amount
       FROM "Payment" p
