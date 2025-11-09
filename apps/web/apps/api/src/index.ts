@@ -162,7 +162,7 @@ app.get('/invoices', async (req: Request, res: Response) => {
     const search = String(req.query.search || '').trim();
     const status = String(req.query.status || '').trim();
 
-    const where: Prisma.InvoiceWhereInput = {};
+  const where: any = {};
     if (status) where.status = status;
 
     const invoices = await prisma.invoice.findMany({
