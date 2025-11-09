@@ -6,12 +6,15 @@ from dotenv import load_dotenv
 # ✅ Load .env file explicitly
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
-app = FastAPI()
+app = FastAPI(title="Flowbit Vanna API", version="1.0.0")
 
-# ✅ Enable CORS
+# ✅ Enable CORS (allow Vercel + localhost)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://flowbit-dashboard-analyzer-web.vercel.app",  # Frontend (Vercel)
+        "http://localhost:3000"  # Local testing
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,7 +22,7 @@ app.add_middleware(
 
 # ✅ Load environment variables
 DATABASE_URL = os.getenv("DATABASE_URL")
-VANNA_API_KEY = os.getenv("VANNA_API_KEY")
+VANNA_API_KEY = os.getenv("VANNA_API_KEY")  # Optional key
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 PORT = int(os.getenv("PORT", 8010))
 
@@ -30,12 +33,19 @@ print(f"🔗 Connected to DB: {DATABASE_URL}")
 print(f"🧠 Using Groq API Key (first 8): {GROQ_API_KEY[:8]}...")
 print(f"🚀 Starting Vanna API on port {PORT}...")
 
+# ✅ Test route
+@app.get("/")
+async def root():
+    return {"status": "✅ Vanna API running successfully!"}
+
+# ✅ Route for chat-based SQL generation and execution
 @app.post("/chat")
 async def chat_with_data(req: Request):
     body = await req.json()
     query = body.get("query")
     client_key = req.headers.get("x-api-key")
 
+    # Optional key validation
     if VANNA_API_KEY and client_key != VANNA_API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -44,7 +54,7 @@ async def chat_with_data(req: Request):
 
     print(f"💬 Received Query: {query}")
 
-    # ✅ Better prompt for Groq
+    # ✅ Generate SQL using Groq
     prompt = f"""
     You are a data analyst. Generate ONLY a valid SQL SELECT statement (PostgreSQL dialect)
     to answer the following user question based on tables: Invoice, Vendor, LineItem, Customer, Payment.
@@ -64,7 +74,7 @@ async def chat_with_data(req: Request):
             json={
                 "model": "mixtral-8x7b",
                 "messages": [
-                    {"role": "system", "content": "You are a helpful SQL data assistant."},
+                    {"role": "system", "content": "You are a helpful SQL assistant."},
                     {"role": "user", "content": prompt},
                 ],
                 "temperature": 0.2,
@@ -89,7 +99,7 @@ async def chat_with_data(req: Request):
         print("❌ Error calling Groq:", str(e))
         raise HTTPException(status_code=500, detail=f"Groq API call failed: {e}")
 
-    # ✅ Execute SQL
+    # ✅ Execute the SQL query
     try:
         conn = psycopg2.connect(DATABASE_URL.replace("postgresql+psycopg", "postgresql"))
         cur = conn.cursor()
@@ -109,7 +119,13 @@ async def chat_with_data(req: Request):
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
 
 
-# ✅ Run server
+# ✅ Healthcheck for Render
+@app.get("/health")
+async def health():
+    return {"status": "ok", "message": "Vanna API is healthy"}
+
+
+# ✅ Run server (Render will automatically call this)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=PORT)
