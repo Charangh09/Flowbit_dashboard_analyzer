@@ -1,0 +1,38 @@
+# Render manifest to define two services: api and vanna
+# Note: This file is a convenience manifest. You still need to connect the repo in Render
+# and may need to edit the service names or environment variables there.
+
+services:
+  - type: web_service
+    name: flowbit-api
+    env: docker
+    plan: free
+    region: oregon
+    repo: https://github.com/Charangh09/Flowbit_dashboard_analyzer
+    branch: main
+    dockerfilePath: Dockerfile
+    buildCommand: ""
+    startCommand: null
+    envVars:
+      - key: VANNA_API_BASE_URL
+        value: "https://example-vanna.onrender.com"
+      - key: VANNA_API_KEY
+        value: ""
+      - key: DATABASE_URL
+        value: ""
+
+  - type: web_service
+    name: flowbit-vanna
+    env: docker
+    plan: free
+    region: oregon
+    repo: https://github.com/Charangh09/Flowbit_dashboard_analyzer
+    branch: main
+    dockerfilePath: services/vanna/Dockerfile
+    buildCommand: ""
+    startCommand: null
+    envVars:
+      - key: VANNA_PORT
+        value: "8000"
+      - key: OTHER_SECRET
+        value: ""
