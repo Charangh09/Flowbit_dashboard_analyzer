@@ -1,14 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@components/ui/card';
-import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getJSON } from '@/lib/api';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { ChatInterface } from '@/components/chat-interface';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -18,7 +15,10 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
+  LineChart,
+  Line,
+  CartesianGrid
 } from 'recharts';
 
 // ---- Types ----
@@ -29,49 +29,56 @@ type Stats = {
   averageInvoiceValue: number;
 };
 
-type Trend = { month: string; invoiceCount: number; invoiceSum: string };
-
 type TopVendor = { vendor: string; spend: string };
 
 type CatSpend = { category: string; spend: string };
 
-type Outflow = { date: string; amount: string };
-
-type InvoiceRow = {
+type Invoice = {
   vendor: string;
   date: string;
   invoiceNumber: string;
-  amount: string | number;
-  status: string;
+  amount: number;
+  status: 'paid' | 'unpaid';
+};
+
+type TrendData = {
+  date: string;
+  volume: number;
+  value: number;
+};
+
+type ForecastData = {
+  date: string;
+  amount: number;
 };
 
 // ---- Component ----
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [trends, setTrends] = useState<Trend[]>([]);
   const [vendors, setVendors] = useState<TopVendor[]>([]);
   const [cats, setCats] = useState<CatSpend[]>([]);
-  const [outflow, setOutflow] = useState<Outflow[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [trend, setTrend] = useState<TrendData[]>([]);
+  const [forecast, setForecast] = useState<ForecastData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const [s, t, v, c, o, inv] = await Promise.all([
-          getJSON('/stats'),
-          getJSON('/invoice-trends'),
-          getJSON('/vendors/top10'),
-          getJSON('/category-spend'),
-          getJSON('/cash-outflow'),
-          getJSON('/invoices'),
+        const [statsData, vendorData, categoryData, invoiceData, trendData, forecastData] = await Promise.all([
+          fetch('/api/analytics').then(res => res.json()),
+          fetch('/api/vendors/top10').then(res => res.json()),
+          fetch('/api/category-spend').then(res => res.json()),
+          fetch('/api/invoices').then(res => res.json()),
+          fetch('/api/trend').then(res => res.json()),
+          fetch('/api/forecast').then(res => res.json()),
         ]);
-        setStats(s);
-        setTrends(t);
-        setVendors(v);
-        setCats(c);
-        setOutflow(o);
-        setInvoices(inv);
+        setStats(statsData);
+        setVendors(vendorData);
+        setCats(categoryData);
+        setInvoices(invoiceData);
+        setTrend(trendData);
+        setForecast(forecastData);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
@@ -80,23 +87,39 @@ export default function Dashboard() {
     })();
   }, []);
 
-  const trendData = useMemo(
-    () => trends.map(d => ({ month: new Date(d.month).toISOString().slice(0, 7), value: Number(d.invoiceSum) })),
-    [trends]
-  );
-
-  const outflowData = useMemo(
-    () => outflow.map(d => ({ date: d.date, amount: Number(d.amount) })),
-    [outflow]
-  );
+  const formatter = new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
 
   const catData = useMemo(
-    () => cats.map(c => ({ name: c.category, value: Number(c.spend) })),
+    () => cats.map(c => ({ 
+      name: c.category,
+      value: Number(c.spend),
+      displayValue: formatter.format(Number(c.spend))
+    })),
     [cats]
   );
 
   return (
     <div className="p-6 space-y-8">
+      {/* ---- Chat Interface ---- */}
+      <ChatInterface onDataReceived={(data) => {
+        if (data[0]?.category) {
+          setCats(data.map(row => ({
+            category: row.category,
+            spend: row.spend
+          })));
+        } else if (data[0]?.vendor) {
+          setVendors(data.map(row => ({
+            vendor: row.vendor,
+            spend: row.spend
+          })));
+        }
+      }} />
+
       {/* ---- Metrics Row ---- */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <MetricCard title="Total Spend (YTD)" value={stats?.totalSpendYTD} loading={loading} />
@@ -105,9 +128,10 @@ export default function Dashboard() {
         <MetricCard title="Average Invoice Value" value={stats?.averageInvoiceValue} loading={loading} />
       </div>
 
-      {/* ---- Charts Row ---- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
+      {/* ---- Charts Section ---- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Invoice Volume + Value Trend */}
+        <Card>
           <CardHeader>
             <CardTitle>Invoice Volume + Value Trend</CardTitle>
           </CardHeader>
@@ -116,40 +140,46 @@ export default function Dashboard() {
               <Skeleton className="h-full w-full" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="#8884d8" />
+                <LineChart data={trend} margin={{ left: 20, right: 20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis yAxisId="left" tickFormatter={(value) => formatter.format(value)} />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip formatter={(value: number, name) => [
+                    name === 'value' ? formatter.format(value) : value,
+                    name === 'value' ? 'Value' : 'Volume'
+                  ]} />
+                  <Line yAxisId="left" type="monotone" dataKey="value" stroke="#82ca9d" name="value" />
+                  <Line yAxisId="right" type="monotone" dataKey="volume" stroke="#8884d8" name="volume" />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
 
+        {/* Cash Outflow Forecast */}
         <Card>
           <CardHeader>
-            <CardTitle>Spend by Vendor (Top 10)</CardTitle>
+            <CardTitle>Cash Outflow Forecast</CardTitle>
           </CardHeader>
           <CardContent className="h-72">
             {loading ? (
               <Skeleton className="h-full w-full" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={vendors}>
-                  <XAxis dataKey="vendor" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="spend" fill="#82ca9d" />
-                </BarChart>
+                <LineChart data={forecast} margin={{ left: 20, right: 20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis tickFormatter={(value) => formatter.format(value)} />
+                  <Tooltip formatter={(value) => formatter.format(Number(value))} />
+                  <Line type="monotone" dataKey="amount" stroke="#ff7f0e" name="Forecast" />
+                </LineChart>
               </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* ---- Spend by Category & Cash Outflow ---- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Spend by Category */}
         <Card>
           <CardHeader>
             <CardTitle>Spend by Category</CardTitle>
@@ -160,33 +190,50 @@ export default function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={catData} dataKey="value" nameKey="name" label>
+                  <Pie 
+                    data={catData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    label={(entry) => entry.displayValue}
+                  >
                     {catData.map((_, i) => (
-                      <Cell key={i} fill={`hsl(${(i * 40) % 360}, 70%, 60%)`} />
+                      <Cell key={i} fill={`hsl(${i * 45}, 70%, 60%)`} />
                     ))}
                   </Pie>
                   <Legend />
+                  <Tooltip formatter={(value) => formatter.format(Number(value))} />
                 </PieChart>
               </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
 
+        {/* Top Vendors */}
         <Card>
           <CardHeader>
-            <CardTitle>Cash Outflow Forecast</CardTitle>
+            <CardTitle>Top Vendors</CardTitle>
           </CardHeader>
           <CardContent className="h-72">
             {loading ? (
               <Skeleton className="h-full w-full" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={outflowData}>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="amount" stroke="#ff7300" />
-                </LineChart>
+                <BarChart data={vendors} layout="vertical" margin={{ left: 150, right: 20 }}>
+                  <XAxis 
+                    type="number" 
+                    tickFormatter={(value) => formatter.format(value)}
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="vendor" 
+                    width={140} 
+                  />
+                  <Tooltip 
+                    formatter={(value) => formatter.format(Number(value))}
+                    labelStyle={{ color: '#666' }}
+                  />
+                  <Bar dataKey="spend" fill="#82ca9d" />
+                </BarChart>
               </ResponsiveContainer>
             )}
           </CardContent>
@@ -196,11 +243,11 @@ export default function Dashboard() {
       {/* ---- Invoices Table ---- */}
       <Card>
         <CardHeader>
-          <CardTitle>Invoices</CardTitle>
+          <CardTitle>Recent Invoices</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-64 w-full" />
           ) : (
             <Table>
               <TableHeader>
@@ -213,13 +260,21 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((i, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell>{i.vendor}</TableCell>
-                    <TableCell>{new Date(i.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{i.invoiceNumber}</TableCell>
-                    <TableCell>{i.amount}</TableCell>
-                    <TableCell>{i.status}</TableCell>
+                {invoices.slice(0, 10).map((invoice, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{invoice.vendor}</TableCell>
+                    <TableCell>{invoice.date}</TableCell>
+                    <TableCell>{invoice.invoiceNumber}</TableCell>
+                    <TableCell>{formatter.format(invoice.amount)}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        invoice.status === 'paid' 
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {invoice.status}
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -233,13 +288,21 @@ export default function Dashboard() {
 
 // ---- Small Component for metric cards ----
 function MetricCard({ title, value, loading }: { title: string; value: any; loading: boolean }) {
+  const formattedValue = typeof value === 'number' 
+    ? new Intl.NumberFormat('de-DE', {
+        style: title.toLowerCase().includes('value') || title.toLowerCase().includes('spend') ? 'currency' : 'decimal',
+        currency: 'EUR',
+        maximumFractionDigits: 2
+      }).format(value)
+    : value;
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm text-gray-500">{title}</CardTitle>
       </CardHeader>
       <CardContent className="text-2xl font-semibold">
-        {loading ? <Skeleton className="h-7 w-28" /> : <span>{value ?? '-'}</span>}
+        {loading ? <Skeleton className="h-7 w-28" /> : <span>{formattedValue ?? '-'}</span>}
       </CardContent>
     </Card>
   );

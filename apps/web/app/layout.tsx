@@ -1,5 +1,10 @@
 import './globals.css';
 import Link from 'next/link';
+import { Inter } from 'next/font/google';
+import { ThemeProvider } from '@/components/theme-provider';
+import { ThemeToggle } from '@/components/theme-toggle';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Flowbit Analytics Dashboard',
@@ -8,7 +13,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta
           httpEquiv="Content-Security-Policy"
@@ -20,28 +25,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   connect-src 'self' http://localhost:* ws://localhost:* https://localhost:*;"
         />
       </head>
-      <body className="bg-gray-50 min-h-screen">
-        <header className="flex justify-between items-center p-4 bg-white shadow-sm">
-          <h1 className="text-xl font-bold text-blue-600 flex items-center gap-2">
-            📊 Flowbit Analytics Dashboard
-          </h1>
-          <nav className="space-x-4">
-            <Link
-              href="/"
-              className="text-sm font-medium text-gray-700 hover:text-blue-600 transition"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/chat"
-              className="text-sm font-medium text-gray-700 hover:text-blue-600 transition"
-            >
-              Chat with Data
-            </Link>
-          </nav>
-        </header>
+      <body className={`${inter.className} min-h-screen bg-background`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <header className="flex justify-between items-center p-4 bg-card shadow-sm">
+            <h1 className="text-xl font-bold text-primary flex items-center gap-2">
+              📊 Flowbit Analytics Dashboard
+            </h1>
+            <nav className="flex items-center space-x-4">
+              <Link
+                href="/"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition"
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/chat"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition"
+              >
+                Chat with Data
+              </Link>
+              <ThemeToggle />
+            </nav>
+          </header>
 
-        <main className="max-w-7xl mx-auto p-6">{children}</main>
+          <main className="max-w-7xl mx-auto p-6">{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );

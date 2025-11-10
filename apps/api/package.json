@@ -4,13 +4,8 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "echo '✅ Skipping TypeScript check for Vercel build' && exit 0",
-    "start": "node dist/index.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev --name init",
-    "prisma:deploy": "prisma migrate deploy",
-    "seed": "tsx src/scripts/seed.ts"
+    "dev": "tsx src/index.ts",
+    "build": "tsc"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

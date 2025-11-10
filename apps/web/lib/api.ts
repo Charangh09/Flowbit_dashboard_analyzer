@@ -1,7 +1,9 @@
 ﻿export async function getJSON(endpoint: string) {
-  // Base URL for your backend API (default: localhost:3001)
-  const base = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3001";
-  const url = `${base}${endpoint}`;
+  // Base URL for your backend API. If NEXT_PUBLIC_API_BASE is not set,
+  // use the local nextjs API routes under /api.
+  const configured = process.env.NEXT_PUBLIC_API_BASE;
+  const base = configured === undefined || configured === '' ? '' : configured;
+  const url = base ? `${base}${endpoint}` : `/api${endpoint}`;
 
   try {
     const res = await fetch(url, {

@@ -13,7 +13,9 @@ export default function ChatWithData() {
     setResponse(null);
 
     try {
-      const res = await fetch('http://localhost:3001/chat-with-data', {
+      const url = '/api/chat';
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: query }),
