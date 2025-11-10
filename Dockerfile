@@ -2,8 +2,12 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copy package files from the API app
-COPY apps/api/package.json apps/api/pnpm-lock.yaml apps/api/tsconfig.json ./
+# Copy package files from the API app and workspace lockfile
+COPY apps/api/package.json apps/api/tsconfig.json ./
+COPY pnpm-lock.yaml ./
+
+# Copy Prisma schema so `prisma generate` (postinstall) can run during install
+COPY apps/api/prisma ./prisma
 
 # Install pnpm and project dependencies
 RUN npm install -g pnpm
@@ -11,6 +15,8 @@ RUN pnpm install --frozen-lockfile
 
 # Copy API source files
 COPY apps/api/src ./src/
+COPY apps/api/src/scripts ./src/scripts
+COPY apps/api/prisma ./prisma
 
 # Build and expose
 RUN pnpm build
